@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Flashcard Quiz App</title>
+  <style>
+  /* Modern styles for Flashcard Quiz App (inlined) */
+  :root{
+    --bg:#0f1724; /* near-black */
+    --card:#0b1220;
+    --muted:#9aa4b2;
+    --accent:#6ee7b7; /* mint */
+    --primary:#60a5fa; /* blue */
+    --danger:#fb7185;
+    --glass: rgba(255,255,255,0.04);
+    --radius:12px;
+    --shadow:0 8px 30px rgba(2,6,23,0.7);
+    --gap:16px;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    --base-font-size:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:linear-gradient(180deg,#071024 0%, #07162a 50%);
+    color:#e6eef6;
+    font-size:var(--base-font-size);
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:18px 20px;
+    gap:12px;
+    background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-bottom:1px solid rgba(255,255,255,0.03);
+    backdrop-filter: blur(6px);
+  }
+  .topbar h1{margin:0;font-weight:600;font-size:1.15rem;letter-spacing:0.2px}
+  .controls{display:flex;align-items:center;gap:12px}
+  .position{opacity:0.9;color:var(--muted);font-size:.95rem}
+  .main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px}
+  .card{
+    width:min(680px,92vw);
+    max-width:720px;
+    height:360px;
+    perspective:1400px;
+    position:relative;
+  }
+  .card-face{
+    width:100%;
+    height:100%;
+    border-radius:var(--radius);
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    box-shadow:var(--shadow);
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    justify-content:center;
+    padding:28px;
+    font-size:1.1rem;
+    line-height:1.4;
+    color:#eaf6ff;
+    position:absolute;
+    top:0;left:0;
+    backface-visibility:hidden;
+    transform-style:preserve-3d;
+    transition:transform 450ms cubic-bezier(.2,.9,.3,1), opacity 200ms;
+    border:1px solid rgba(255,255,255,0.03);
+  }
+  .card .front{transform:rotateY(0)}
+  .card .back{transform:rotateY(-180deg)}
+  .card.flipped .front{transform:rotateY(180deg)}
+  .card.flipped .back{transform:rotateY(0)}
+  .hidden{display:none!important}
+  .actions, .edit-actions{display:flex;gap:12px;margin-top:18px}
+  .btn{
+    background:transparent;
+    border:1px solid rgba(255,255,255,0.06);
+    color:var(--muted);
+    padding:10px 14px;
+    border-radius:10px;
+    cursor:pointer;
+    font-weight:600;
+    transition:all 180ms ease;
+  }
+  .btn:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+  .btn.primary{background:linear-gradient(90deg,var(--primary),#7dd3fc);color:#04263b;border:0}
+  .btn.secondary{background:linear-gradient(90deg,#dbeafe, #e0f2fe);color:#03244a;border:0}
+  .btn.danger{background:linear-gradient(90deg,var(--danger),#fb92a0);color:#2b0b10;border:0}
+  .btn.outline{background:transparent;border:1px dashed rgba(255,255,255,0.06);color:var(--accent)}
+  .btn.icon{background:transparent;border:0;color:var(--muted);font-size:1.05rem}
+  .form{display:flex;flex-direction:column;gap:12px}
+  .form label{display:flex;flex-direction:column;color:var(--muted);font-weight:600}
+  .form textarea{resize:vertical;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit}
+  .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.6));z-index:50}
+  .modal-content{width:min(720px,94vw);background:linear-gradient(180deg,#071825, #05202a);border-radius:14px;padding:18px;box-shadow:0 20px 50px rgba(3,10,18,0.8);border:1px solid rgba(255,255,255,0.03)}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+  .footer{padding:14px;text-align:center;color:var(--muted);font-size:.85rem}
+  /* small screens */
+  @media (max-width:640px){
+    .card{height:320px}
+    .topbar{padding:12px}
+    .btn{padding:8px 10px}
+  }
+  /* Theme: warm/amber */
+  .theme-amber{
+    --bg:#0a0a05;
+    --card:#151205;
+    --muted:#f3e8d9;
+    --accent:#ffd580;
+    --primary:#f59e0b;
+    --danger:#fb7185;
+    background:linear-gradient(180deg,#0a0712 0%, #151205 60%);
+  }
+  .theme-amber .topbar, .theme-amber .modal-content, .theme-amber .card-face{
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02));
+  }
+  @media (min-width: 900px){
+    :root{--base-font-size:17px}
+  }
+  @media (min-width: 1200px){
+    :root{--base-font-size:18px}
+  }
+  /* subtle helper styles for content inside cards */
+  .card-face h2{margin:0 0 8px;font-size:1.15rem}
+  .card-face p{margin:0;color:var(--muted)}
+  /* focus states */
+  .btn:focus, .form textarea:focus{outline:2px solid rgba(96,165,250,0.15);outline-offset:3px}
+  /* small utility */
+  .center{display:flex;align-items:center;justify-content:center}
+  /* Welcome screen */
+  .welcome {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, #071024 0%, #0d1f3c 50%, #051015 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    gap: 24px;
+    backdrop-filter: blur(8px);
+  }
+  .welcome.hidden {
+    display: none;
+  }
+  .welcome h1 {
+    font-size: 2.5rem;
+    margin: 0;
+    text-align: center;
+    background: linear-gradient(90deg, #60a5fa, #6ee7b7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 1px;
+  }
+  .welcome p {
+    color: var(--muted);
+    font-size: 1.1rem;
+    text-align: center;
+    max-width: 500px;
+  }
+  .welcome .btn {
+    padding: 14px 32px;
+    font-size: 1.05rem;
+  }
+  @media (max-width: 640px) {
+    .welcome h1 {
+      font-size: 1.8rem;
+    }
+    .welcome p {
+      font-size: 0.95rem;
+    }
+  }
+  /* Timer and answer input */
+  .timer-section {
+    width: 100%;
+    max-width: 680px;
+    margin-bottom: 12px;
+  }
+  .timer-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .timer-display.warning {
+    color: #fb7185;
+  }
+  .progress-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6ee7b7, #60a5fa);
+    transition: width 100ms linear, background-color 100ms;
+    border-radius: 4px;
+  }
+  .progress-fill.warning {
+    background: linear-gradient(90deg, #fb7185, #fb92a0);
+  }
+  .answer-input-section {
+    margin-top: 12px;
+  }
+  .answer-input-section label {
+    display: block;
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+  }
+  .answer-input-section input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    background: transparent;
+    color: #eaf6ff;
+    font-size: 1rem;
+    font-family: inherit;
+  }
+  .answer-input-section input:focus {
+    outline: 2px solid rgba(96,165,250,0.15);
+    outline-offset: 2px;
+    border-color: rgba(96,165,250,0.3);
+  }
+  .submit-answer-btn {
+    margin-top: 8px;
+    width: 100%;
+  }
+  /* Celebration message */
+  .celebration {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.3);
+    background: linear-gradient(135deg, #6ee7b7, #60a5fa);
+    color: #0a0a05;
+    padding: 32px 48px;
+    border-radius: 16px;
+    font-size: 2rem;
+    font-weight: 700;
+    text-align: center;
+    z-index: 200;
+    box-shadow: 0 20px 50px rgba(110, 231, 183, 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .celebration.show {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  /* Wrong answer message */
+  .wrong-answer {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.3);
+    background: linear-gradient(135deg, #fb7185, #fb92a0);
+    color: #2b0b10;
+    padding: 32px 48px;
+    border-radius: 16px;
+    font-size: 1.8rem;
+    font-weight: 700;
+    text-align: center;
+    z-index: 200;
+    box-shadow: 0 20px 50px rgba(251, 113, 133, 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .wrong-answer.show {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  </style>
+</head>
+<body>
+  <!-- Welcome Screen -->
+  <div id="welcome" class="welcome">
+    <h1>Welcome to FlashCard Quiz Demo!</h1>
+    <div style="display:flex;gap:12px;align-items:center">
+      <button id="startBtn" class="btn primary">Tap to play</button>
+      <button id="aboutBtn" class="btn secondary">About</button>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <h1>Flashcards</h1>
+    <div class="controls">
+      <button id="addBtn" class="btn primary">Add Card</button>
+      <button id="themeBtn" class="btn icon" title="Toggle theme">🎨</button>
+      <span id="position" class="position"></span>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="timer-section">
+      <div class="timer-display">
+        <span>Time remaining:</span>
+        <span id="timerText">15s</span>
+      </div>
+      <div class="progress-bar">
+        <div id="progressFill" class="progress-fill"></div>
+      </div>
+    </div>
+
+    <div id="card" class="card">
+      <div id="front" class="card-face front"></div>
+      <div id="back" class="card-face back"></div>
+    </div>
+
+    <div class="answer-input-section">
+      <label for="userAnswer">Your Answer:</label>
+      <input type="text" id="userAnswer" placeholder="Type your answer here..." />
+      <button id="submitAnswerBtn" class="btn primary submit-answer-btn">Submit Answer</button>
+    </div>
+
+    <div id="celebration" class="celebration" style="display: none;">You got it 🎉</div>
+
+    <div id="wrongAnswer" class="wrong-answer">Wrong Answer, play again.</div>
+
+    <div class="actions">
+      <button id="prevBtn" class="btn">Previous</button>
+      <button id="showBtn" class="btn outline">Show Answer</button>
+      <button id="nextBtn" class="btn">Next</button>
+    </div>
+
+    <div class="edit-actions">
+      <button id="editBtn" class="btn secondary">Edit</button>
+      <button id="deleteBtn" class="btn danger">Delete</button>
+    </div>
+  </main>
+
+  <!-- Modal for Add/Edit -->
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-content">
+      <header class="modal-header">
+        <h2 id="modalTitle">Add Flashcard</h2>
+        <button id="closeModal" class="btn icon">✕</button>
+      </header>
+
+      <form id="cardForm" class="form">
+        <label>
+          Question
+          <textarea id="question" rows="3" required></textarea>
+        </label>
+
+        <label>
+          Answer
+          <textarea id="answer" rows="4" required></textarea>
+        </label>
+
+        <div class="form-actions">
+          <button type="submit" class="btn primary">Save</button>
+          <button type="button" id="cancelBtn" class="btn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- About Modal -->
+  <div id="aboutModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+    <div class="modal-content">
+      <header class="modal-header">
+        <h2 id="aboutTitle">About FlashCard Quiz Demo</h2>
+        <button id="closeAbout" class="btn icon">✕</button>
+      </header>
+      <div style="max-height:60vh;overflow:auto;padding:8px 4px;color:var(--muted)">
+        <p>This FlashCard Quiz Demo is a lightweight, single-file web application (HTML/CSS/JavaScript) designed for interactive learning using digital flashcards.</p>
+        <h3>Purpose</h3>
+        <p>Practice recall and reinforce memory by answering short question/answer flashcards. The app encourages active retrieval with a short timed window for each question.</p>
+        <h3>Features</h3>
+        <ul>
+          <li>Add, edit, and delete flashcards directly in the interface.</li>
+          <li>Local persistence: all cards are stored in your browser's <strong>localStorage</strong> under the key <code>flashcards_v1</code> (data stays on your device).</li>
+          <li>Timed challenge: each question gives you a limited time to type an answer (default 15 seconds).</li>
+          <li>Progress bar and countdown display under the question.</li>
+          <li>Answer input field: type your answer and press <strong>Submit Answer</strong> to check.</li>
+          <li>On correct answers you see a celebratory message and the answer is revealed; on incorrect answers you see a retry prompt and can try again.</li>
+          <li>Navigation (Previous / Next) is disabled until the current card has been revealed or correctly answered to ensure focused practice.</li>
+          <li>Card flipping: click the card or use the "Show Answer" button to reveal the answer manually.</li>
+          <li>Theme toggle: switch to a warm "amber" theme; preference is saved to localStorage.</li>
+          <li>Accessible modal dialogs and controls with keyboard support: Escape closes modals.</li>
+        </ul>
+        <h3>How it works</h3>
+        <p>When you load a card the timer starts automatically. You should type your best answer in the input field and press <strong>Submit Answer</strong>. If your typed answer (case-insensitive) matches the stored answer exactly, the app displays "You got it 🎉", flips the card, and enables navigation. If it doesn't match, the app displays "Wrong Answer, play again." and restarts a short timer so you can try again.</p>
+        <h3>Data & Privacy</h3>
+        <p>All data (flashcards and theme preference) is stored locally in your browser's storage. The app does not send or sync data to any server. Clearing your browser data will remove saved flashcards.</p>
+        <h3>Limitations</h3>
+        <ul>
+          <li>No cloud sync or export/import by default (you can view localStorage in the browser devtools to copy the JSON manually).</li>
+          <li>Answer checking is a simple exact (trimmed, case-insensitive) match. It does not use fuzzy matching or natural-language similarity.</li>
+          <li>There is no user authentication — intended as a local demo only.</li>
+        </ul>
+        <h3>Technical Details</h3>
+        <ul>
+          <li>Single-file app: all styles and scripts are embedded in <code>App.html</code>.</li>
+          <li>Vanilla JavaScript without external libraries for max portability.</li>
+          <li>Responsive layout supports mobile and desktop screens.</li>
+        </ul>
+        <h3>Accessibility</h3>
+        <p>The app uses semantic HTML where possible, focusable controls, and keyboard shortcuts for convenience. Modal dialogs include <code>role="dialog"</code> and <code>aria-modal="true"</code>. Please report any accessibility gaps.</p>
+        <h3>Keyboard Shortcuts</h3>
+        <ul>
+          <li><strong>Escape</strong>: Close open modal dialogs.</li>
+          <li>Navigation can be controlled via the Previous/Next buttons (mouse or touch).</li>
+        </ul>
+        <h3>Extending the App</h3>
+        <p>You can extend this demo by adding import/export (JSON), fuzzy answer matching, spaced-repetition scheduling, or syncing to a remote backend. The code is intentionally compact and commented to make these changes straightforward.</p>
+        <h3>Credits & License</h3>
+        <p>Created as a demo. Feel free to reuse and modify the code for personal or instructional use. No external dependencies included.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <small>Simple Flashcard Quiz — data saved locally in your browser</small>
+  </footer>
+
+  <script>
+  // Full behavior: add / edit / delete / navigate / persist
+  document.addEventListener('DOMContentLoaded', () => {
+    const cardEl = document.getElementById('card');
+    const frontEl = document.getElementById('front');
+    const backEl = document.getElementById('back');
+    const showBtn = document.getElementById('showBtn');
+    const themeBtn = document.getElementById('themeBtn');
+    const position = document.getElementById('position');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const addBtn = document.getElementById('addBtn');
+    const editBtn = document.getElementById('editBtn');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const modal = document.getElementById('modal');
+    const closeModal = document.getElementById('closeModal');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const cardForm = document.getElementById('cardForm');
+    const questionInput = document.getElementById('question');
+    const answerInput = document.getElementById('answer');
+    const modalTitle = document.getElementById('modalTitle');
+    const welcomeScreen = document.getElementById('welcome');
+    const startBtn = document.getElementById('startBtn');
+    const timerText = document.getElementById('timerText');
+    const progressFill = document.getElementById('progressFill');
+    const userAnswerInput = document.getElementById('userAnswer');
+    const submitAnswerBtn = document.getElementById('submitAnswerBtn');
+    const celebration = document.getElementById('celebration');
+    const wrongAnswer = document.getElementById('wrongAnswer');
+
+    let cards = [];
+    let current = 0;
+    let timerInterval = null;
+    let timeRemaining = 15;
+    const TIMER_DURATION = 15;
+    let answerSubmitted = false;
+
+    const STORAGE_KEY = 'flashcards_v1';
+
+    function startTimer(){
+      stopTimer();
+      timeRemaining = TIMER_DURATION;
+      updateTimerDisplay();
+      timerInterval = setInterval(() => {
+        timeRemaining--;
+        updateTimerDisplay();
+        if (timeRemaining <= 0){
+          stopTimer();
+          autoFlip();
+        }
+      }, 1000);
+    }
+
+    function stopTimer(){
+      if (timerInterval){
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    }
+
+    function updateTimerDisplay(){
+      timerText.textContent = timeRemaining + 's';
+      const percent = (timeRemaining / TIMER_DURATION) * 100;
+      progressFill.style.width = percent + '%';
+      const isWarning = timeRemaining <= 3;
+      timerText.parentElement.classList.toggle('warning', isWarning);
+      progressFill.classList.toggle('warning', isWarning);
+    }
+
+    function autoFlip(){
+      cardEl.classList.add('flipped');
+      setShowText(true);
+      userAnswerInput.disabled = true;
+      submitAnswerBtn.disabled = true;
+      // reveal counts as answered — allow navigation
+      answerSubmitted = true;
+      prevBtn.disabled = false;
+      nextBtn.disabled = false;
+    }
+
+    function showCelebration(){
+      celebration.classList.add('show');
+      setTimeout(() => {
+        celebration.classList.remove('show');
+      }, 2000);
+    }
+
+    function showWrongAnswer(){
+      wrongAnswer.classList.add('show');
+      setTimeout(() => {
+        wrongAnswer.classList.remove('show');
+      }, 2000);
+    }
+
+    function load(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        cards = raw ? JSON.parse(raw) : [];
+      }catch(e){ cards = []; }
+      if (current >= cards.length) current = Math.max(0, cards.length - 1);
+    }
+
+    function save(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+    }
+
+    function render(){
+      if (!cards.length){
+        frontEl.innerHTML = '<h2 class="center">No flashcards</h2><p class="center">Click Add Card to create one.</p>';
+        backEl.innerHTML = '';
+        editBtn.style.display = 'none';
+        deleteBtn.style.display = 'none';
+        prevBtn.disabled = true;
+        nextBtn.disabled = true;
+        showBtn.disabled = true;
+        position.textContent = '';
+        cardEl.classList.remove('flipped');
+        setShowText(false);
+        return;
+      }
+
+      const item = cards[current];
+      frontEl.innerHTML = `<h2>Question</h2><p>${escapeHtml(item.question)}</p>`;
+      backEl.innerHTML = `<h2>Answer</h2><p>${escapeHtml(item.answer)}</p>`;
+      editBtn.style.display = '';
+      deleteBtn.style.display = '';
+      prevBtn.disabled = cards.length <= 1;
+      nextBtn.disabled = cards.length <= 1;
+      showBtn.disabled = false;
+      position.textContent = `${current + 1} / ${cards.length}`;
+      cardEl.classList.remove('flipped');
+      setShowText(false);
+      userAnswerInput.value = '';
+      userAnswerInput.disabled = false;
+      submitAnswerBtn.disabled = false;
+      answerSubmitted = false;
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+      startTimer();
+    }
+
+    function escapeHtml(s){
+      if (!s) return '';
+      return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('\"','&quot;');
+    }
+
+    function setShowText(flipped){
+      showBtn.textContent = flipped ? 'Hide Answer' : 'Show Answer';
+    }
+
+    // Modal helpers
+    function openModal(mode){
+      stopTimer();
+      modal.classList.remove('hidden');
+      modal.setAttribute('aria-hidden','false');
+      if (mode === 'add'){
+        modalTitle.textContent = 'Add Flashcard';
+        questionInput.value = '';
+        answerInput.value = '';
+        cardForm.dataset.mode = 'add';
+      }else{
+        modalTitle.textContent = 'Edit Flashcard';
+        const item = cards[current] || {question:'', answer:''};
+        questionInput.value = item.question;
+        answerInput.value = item.answer;
+        cardForm.dataset.mode = 'edit';
+      }
+      questionInput.focus();
+    }
+
+    function closeModalFn(){
+      modal.classList.add('hidden');
+      modal.setAttribute('aria-hidden','true');
+      delete cardForm.dataset.mode;
+      startTimer();
+    }
+
+    function closeWelcome(){
+      welcomeScreen.classList.add('hidden');
+    }
+
+    // wire UI
+    startBtn.addEventListener('click', closeWelcome);
+    const aboutBtn = document.getElementById('aboutBtn');
+    const aboutModal = document.getElementById('aboutModal');
+    const closeAbout = document.getElementById('closeAbout');
+    aboutBtn.addEventListener('click', () => {
+      stopTimer();
+      // hide welcome so modal is visible on top
+      if (welcomeScreen) welcomeScreen.classList.add('hidden');
+      aboutModal.classList.remove('hidden');
+    });
+    closeAbout.addEventListener('click', () => {
+      aboutModal.classList.add('hidden');
+      // restore welcome screen when closing about
+      if (welcomeScreen) welcomeScreen.classList.remove('hidden');
+      startTimer();
+    });
+
+    submitAnswerBtn.addEventListener('click', () => {
+      const userAnswer = userAnswerInput.value.trim().toLowerCase();
+      const correctAnswer = cards[current] ? cards[current].answer.trim().toLowerCase() : '';
+      stopTimer();
+      if (userAnswer === correctAnswer) {
+        // correct -> celebrate, flip, and allow navigation
+        showCelebration();
+        answerSubmitted = true;
+        prevBtn.disabled = false;
+        nextBtn.disabled = false;
+        autoFlip();
+      } else {
+        // wrong -> show message, keep card on question and allow retry
+        showWrongAnswer();
+        // give a short pause, then restart timer so user can try again
+        setTimeout(() => {
+          userAnswerInput.focus();
+          startTimer();
+        }, 1200);
+      }
+    });
+
+    showBtn.addEventListener('click', () => {
+      const isFlipped = cardEl.classList.toggle('flipped');
+      setShowText(isFlipped);
+      if (isFlipped){
+        // user revealed the answer manually — allow navigation
+        answerSubmitted = true;
+        prevBtn.disabled = false;
+        nextBtn.disabled = false;
+        userAnswerInput.disabled = true;
+        submitAnswerBtn.disabled = true;
+      }
+    });
+
+    cardEl.addEventListener('click', (e) => {
+      // clicking card flips it (but not when clicking buttons)
+      if (e.target.closest('button')) return;
+      const isFlipped = cardEl.classList.toggle('flipped');
+      setShowText(isFlipped);
+      if (isFlipped){
+        answerSubmitted = true;
+        prevBtn.disabled = false;
+        nextBtn.disabled = false;
+        userAnswerInput.disabled = true;
+        submitAnswerBtn.disabled = true;
+      }
+    });
+
+    addBtn.addEventListener('click', () => openModal('add'));
+    editBtn.addEventListener('click', () => openModal('edit'));
+
+    closeModal.addEventListener('click', closeModalFn);
+    cancelBtn.addEventListener('click', closeModalFn);
+
+    cardForm.addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      const q = questionInput.value.trim();
+      const a = answerInput.value.trim();
+      if (!q || !a) return;
+      const mode = cardForm.dataset.mode || 'add';
+      if (mode === 'add'){
+        cards.push({question:q, answer:a});
+        current = cards.length - 1;
+      }else{
+        if (cards[current]){
+          cards[current].question = q;
+          cards[current].answer = a;
+        }
+      }
+      save();
+      render();
+      closeModalFn();
+    });
+
+    deleteBtn.addEventListener('click', () => {
+      if (!cards.length) return;
+      if (!confirm('Delete this flashcard?')) return;
+      cards.splice(current,1);
+      if (current >= cards.length) current = Math.max(0, cards.length - 1);
+      save();
+      render();
+    });
+
+    prevBtn.addEventListener('click', () => {
+      if (!cards.length) return;
+      current = (current - 1 + cards.length) % cards.length;
+      render();
+    });
+
+    nextBtn.addEventListener('click', () => {
+      if (!cards.length) return;
+      current = (current + 1) % cards.length;
+      render();
+    });
+
+    // Theme toggle
+    const savedTheme = localStorage.getItem('flashcardTheme');
+    if (savedTheme === 'amber') document.body.classList.add('theme-amber');
+    if (themeBtn){
+      themeBtn.addEventListener('click', () => {
+        const isAmber = document.body.classList.toggle('theme-amber');
+        localStorage.setItem('flashcardTheme', isAmber ? 'amber' : 'default');
+      });
+    }
+
+    // keyboard / accessibility
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModalFn();
+    });
+
+    // init
+    load();
+    render();
+  });
+  </script>
+</body>
+</html>
